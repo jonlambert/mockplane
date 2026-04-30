@@ -1,0 +1,11 @@
+{
+  "singleQuote": true,
+  "sortTailwindcss": true,
+  "ignorePatterns": [
+    "pnpm-lock.yaml",
+    "**/node_modules/**",
+    "**/dist/**",
+    "examples/tanstack-start/src/routeTree.gen.ts",
+    "examples/tanstack-start/src/styles.css"
+  ]
+}

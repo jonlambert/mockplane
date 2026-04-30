@@ -1,0 +1,16 @@
+node_modules
+.DS_Store
+dist
+*.local
+.env
+.nitro
+.tanstack
+.output
+.vinxi
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+playwright/.auth/
