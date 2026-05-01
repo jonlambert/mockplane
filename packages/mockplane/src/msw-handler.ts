@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 import type { MockFile, MockOptions } from './types';
+import { urlMatchesPattern } from './url-pattern';
 
 export const INCORRECT_REQUEST_PREFIX = 'incorrect-request';
 
@@ -47,7 +48,7 @@ export function createMswHandler(options?: MockOptions) {
       const { label, handlers } = JSON.parse(fileContents) as MockFile;
 
       const handler = handlers.find(
-        (h) => h.request.method === request.method && h.url === request.url,
+        (h) => h.request.method === request.method && urlMatchesPattern(h.url, request.url),
       );
 
       if (handler) {
