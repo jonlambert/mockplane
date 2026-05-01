@@ -54,15 +54,18 @@ pnpm add -D msw playwright @playwright/test
 
 ### 1. Initialise in your server entry point
 
-Call `startServer` and `patchFetch` when `MOCKPLANE=true`, and wrap each incoming request with `withMockplaneContext`. The example below is for **TanStack Start** (`src/server.ts`):
+Call `startServer`, `patchFetch`, and (if your app uses axios or any other library that bypasses `globalThis.fetch`) `patchNodeHttp` when `MOCKPLANE=true`, then wrap each incoming request with `withMockplaneContext`. The example below is for **TanStack Start**:
 
 ```ts
+// src/server.ts
+
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry';
 
 if (process.env.MOCKPLANE === 'true') {
-  const { startServer, patchFetch } = await import('mockplane');
+  const { startServer, patchFetch, patchNodeHttp } = await import('mockplane');
   startServer();
   patchFetch();
+  patchNodeHttp();
 }
 
 export default createServerEntry({

@@ -1,16 +1,4 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
-
-const store = new AsyncLocalStorage<string>();
-
-function parseMockIdFromCookie(request: Request): string | undefined {
-  const cookie = request.headers.get('cookie') ?? '';
-  return (
-    cookie
-      .split(';')
-      .find((c) => c.trim().startsWith('mockId='))
-      ?.split('=')[1] ?? undefined
-  );
-}
+import { mockIdStore, parseMockIdFromCookie } from './store';
 
 /**
  * Patches the global `fetch` to automatically forward the `mockId` header on
@@ -29,7 +17,7 @@ function parseMockIdFromCookie(request: Request): string | undefined {
 export function patchFetch(): void {
   const original = globalThis.fetch;
   globalThis.fetch = (input, init) => {
-    const mockId = store.getStore();
+    const mockId = mockIdStore.getStore();
     if (!mockId) return original(input, init);
     const headers = new Headers(init?.headers);
     headers.set('mockId', mockId);
@@ -42,6 +30,9 @@ export function patchFetch(): void {
  * `mockId` cookie value available to `patchFetch`'s global fetch override for
  * the duration of the request.
  *
+ * If you are also using `patchNodeHttp`, this single wrapper covers both —
+ * there is no separate context function needed for node:http.
+ *
  * ```ts
  * // src/server.ts
  * createServerEntry({
@@ -51,8 +42,13 @@ export function patchFetch(): void {
  * })
  * ```
  */
-export function withMockplaneContext(request: Request, fn: () => unknown): unknown {
+export function withMockplaneContext(
+  request: Request,
+  fn: () => unknown,
+): unknown {
   const mockId = parseMockIdFromCookie(request);
+
   if (!mockId) return fn();
-  return store.run(mockId, fn);
+
+  return mockIdStore.run(mockId, fn);
 }
