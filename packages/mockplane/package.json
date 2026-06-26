@@ -1,6 +1,6 @@
 {
   "name": "mockplane",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Per-test server-side mocking for Playwright via MSW and cookie-forwarding",
   "license": "MIT",
   "type": "module",
@@ -14,6 +14,10 @@
     },
     "./package.json": "./package.json"
   },
+  "files": [
+    "./dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
