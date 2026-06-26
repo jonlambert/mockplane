@@ -90,6 +90,9 @@ export function createMockNetwork({
     async handle(handler) {
       handlers.push(handler);
 
+      // Create mockplane dir
+      await mkdir(dirname(mockFilePath), { recursive: true });
+
       const releaseLock = await acquireLock(lockPath);
       try {
         if (!initialized) {
@@ -105,7 +108,6 @@ export function createMockNetwork({
               sameSite: "Lax",
             },
           ]);
-          await mkdir(dirname(mockFilePath), { recursive: true });
         }
 
         await writeFile(

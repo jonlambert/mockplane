@@ -1,6 +1,6 @@
 {
   "name": "mockplane",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Per-test server-side mocking for Playwright via MSW and cookie-forwarding",
   "license": "MIT",
   "type": "module",
