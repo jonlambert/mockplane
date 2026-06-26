@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMswHandler } from './msw-handler';
-import type { MockFile } from './types';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createMswHandler } from "./msw-handler";
+import type { MockFile } from "./types";
 
 // ---------------------------------------------------------------------------
 // fs/promises mock — controls what "mock files on disk" look like per test
@@ -8,7 +8,7 @@ import type { MockFile } from './types';
 
 const mockFileStore = new Map<string, MockFile>();
 
-vi.mock('node:fs/promises', () => ({
+vi.mock("node:fs/promises", () => ({
   mkdir: vi.fn().mockResolvedValue(undefined),
   readdir: vi
     .fn()
@@ -16,7 +16,7 @@ vi.mock('node:fs/promises', () => ({
       [...mockFileStore.keys()].map((k) => `${k}.json`),
     ),
   readFile: vi.fn().mockImplementation(async (filePath: string) => {
-    const hash = filePath.split('/').pop()?.replace('.json', '');
+    const hash = filePath.split("/").pop()?.replace(".json", "");
     const file = hash ? mockFileStore.get(hash) : undefined;
     if (!file) throw new Error(`ENOENT: ${filePath}`);
     return JSON.stringify(file);
@@ -28,16 +28,16 @@ vi.mock('node:fs/promises', () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-const TEST_HASH = 'abc123';
-const MOCKS_DIR = '/tmp/mockplane';
+const TEST_HASH = "abc123";
+const MOCKS_DIR = "/tmp/mockplane";
 
-function makeMockFile(handlers: MockFile['handlers']): MockFile {
-  return { hash: TEST_HASH, label: 'Test file - test title', handlers };
+function makeMockFile(handlers: MockFile["handlers"]): MockFile {
+  return { hash: TEST_HASH, label: "Test file - test title", handlers };
 }
 
 function makeRequest(
   url: string,
-  method = 'GET',
+  method = "GET",
   headers: Record<string, string> = {},
 ): Request {
   return new Request(url, {
@@ -49,7 +49,7 @@ function makeRequest(
 async function invokeHandler(request: Request): Promise<Response | undefined> {
   const handler = createMswHandler({
     mocksDir: MOCKS_DIR,
-    resultsDir: '/tmp/results',
+    resultsDir: "/tmp/results",
   });
 
   // The resolver is the async function passed to http.all(). We call it directly.
@@ -71,62 +71,62 @@ afterEach(() => {
   mockFileStore.clear();
 });
 
-describe('createMswHandler — no mock context', () => {
-  it('returns undefined (pass-through) when there is no mockId header', async () => {
-    const request = new Request('https://example.com/posts', { method: 'GET' });
+describe("createMswHandler — no mock context", () => {
+  it("returns undefined (pass-through) when there is no mockId header", async () => {
+    const request = new Request("https://example.com/posts", { method: "GET" });
     const result = await invokeHandler(request);
     expect(result).toBeUndefined();
   });
 });
 
-describe('createMswHandler — exact URL matching (existing behaviour)', () => {
-  it('returns the mocked response for an exact URL match', async () => {
+describe("createMswHandler — exact URL matching (existing behaviour)", () => {
+  it("returns the mocked response for an exact URL match", async () => {
     mockFileStore.set(
       TEST_HASH,
       makeMockFile([
         {
-          url: 'https://example.com/posts',
-          request: { method: 'GET' },
-          response: { status: 200, body: [{ id: 1, title: 'Hello' }] },
+          url: "https://example.com/posts",
+          request: { method: "GET" },
+          response: { status: 200, body: [{ id: 1, title: "Hello" }] },
         },
       ]),
     );
 
     const response = await invokeHandler(
-      makeRequest('https://example.com/posts'),
+      makeRequest("https://example.com/posts"),
     );
     expect(response?.status).toBe(200);
     const body = await response?.json();
-    expect(body).toEqual([{ id: 1, title: 'Hello' }]);
+    expect(body).toEqual([{ id: 1, title: "Hello" }]);
   });
 
-  it('returns a leaked-request 500 when no handler matches the URL', async () => {
+  it("returns a leaked-request 500 when no handler matches the URL", async () => {
     mockFileStore.set(
       TEST_HASH,
       makeMockFile([
         {
-          url: 'https://example.com/posts',
-          request: { method: 'GET' },
+          url: "https://example.com/posts",
+          request: { method: "GET" },
           response: { status: 200, body: [] },
         },
       ]),
     );
 
     const response = await invokeHandler(
-      makeRequest('https://example.com/comments'),
+      makeRequest("https://example.com/comments"),
     );
     expect(response?.status).toBe(500);
     const body = await response?.json();
-    expect(body).toEqual({ error: 'Leaked request' });
+    expect(body).toEqual({ error: "Leaked request" });
   });
 
-  it('does not match when the HTTP method differs', async () => {
+  it("does not match when the HTTP method differs", async () => {
     mockFileStore.set(
       TEST_HASH,
       makeMockFile([
         {
-          url: 'https://example.com/posts',
-          request: { method: 'POST' },
+          url: "https://example.com/posts",
+          request: { method: "POST" },
           response: { status: 201, body: { id: 99 } },
         },
       ]),
@@ -134,211 +134,256 @@ describe('createMswHandler — exact URL matching (existing behaviour)', () => {
 
     // GET request, but handler is POST — should be a leaked request
     const response = await invokeHandler(
-      makeRequest('https://example.com/posts', 'GET'),
+      makeRequest("https://example.com/posts", "GET"),
     );
     expect(response?.status).toBe(500);
   });
 
-  it('matches a URL with an exact query string', async () => {
+  it("matches a URL with an exact query string", async () => {
     mockFileStore.set(
       TEST_HASH,
       makeMockFile([
         {
-          url: 'https://example.com/posts?_limit=5',
-          request: { method: 'GET' },
+          url: "https://example.com/posts?_limit=5",
+          request: { method: "GET" },
           response: { status: 200, body: [] },
         },
       ]),
     );
 
     const response = await invokeHandler(
-      makeRequest('https://example.com/posts?_limit=5'),
+      makeRequest("https://example.com/posts?_limit=5"),
     );
     expect(response?.status).toBe(200);
   });
 
-  it('does not match when the query string differs', async () => {
+  it("does not match when the query string differs", async () => {
     mockFileStore.set(
       TEST_HASH,
       makeMockFile([
         {
-          url: 'https://example.com/posts?_limit=5',
-          request: { method: 'GET' },
+          url: "https://example.com/posts?_limit=5",
+          request: { method: "GET" },
           response: { status: 200, body: [] },
         },
       ]),
     );
 
     const response = await invokeHandler(
-      makeRequest('https://example.com/posts?_limit=10'),
+      makeRequest("https://example.com/posts?_limit=10"),
     );
     expect(response?.status).toBe(500);
   });
 });
 
-describe('createMswHandler — ** wildcard (crosses slashes)', () => {
-  it('matches any path under a host with **', async () => {
+describe("createMswHandler — ** wildcard (crosses slashes)", () => {
+  it("matches any path under a host with **", async () => {
     mockFileStore.set(
       TEST_HASH,
       makeMockFile([
         {
-          url: 'https://example.com/**',
-          request: { method: 'GET' },
+          url: "https://example.com/**",
+          request: { method: "GET" },
           response: { status: 200, body: { ok: true } },
         },
       ]),
     );
 
     const response = await invokeHandler(
-      makeRequest('https://example.com/posts'),
+      makeRequest("https://example.com/posts"),
     );
     expect(response?.status).toBe(200);
 
     const response2 = await invokeHandler(
-      makeRequest('https://example.com/v1/users/42'),
+      makeRequest("https://example.com/v1/users/42"),
     );
     expect(response2?.status).toBe(200);
   });
 
-  it('does not match a different host', async () => {
+  it("does not match a different host", async () => {
     mockFileStore.set(
       TEST_HASH,
       makeMockFile([
         {
-          url: 'https://example.com/**',
-          request: { method: 'GET' },
+          url: "https://example.com/**",
+          request: { method: "GET" },
           response: { status: 200, body: {} },
         },
       ]),
     );
 
     const response = await invokeHandler(
-      makeRequest('https://other.com/posts'),
+      makeRequest("https://other.com/posts"),
     );
     expect(response?.status).toBe(500);
   });
 
-  it('matches with a leading ** (crosses ://)', async () => {
+  it("matches with a leading ** (crosses ://)", async () => {
     mockFileStore.set(
       TEST_HASH,
       makeMockFile([
         {
-          url: '**/posts',
-          request: { method: 'GET' },
+          url: "**/posts",
+          request: { method: "GET" },
           response: { status: 200, body: [] },
         },
       ]),
     );
 
     const response = await invokeHandler(
-      makeRequest('https://example.com/posts'),
+      makeRequest("https://example.com/posts"),
     );
     expect(response?.status).toBe(200);
 
     const response2 = await invokeHandler(
-      makeRequest('https://api.example.com/v1/posts'),
+      makeRequest("https://api.example.com/v1/posts"),
     );
     expect(response2?.status).toBe(200);
   });
 });
 
-describe('createMswHandler — * wildcard (single segment only)', () => {
-  it('matches a single path segment', async () => {
+describe("createMswHandler — * wildcard (single segment only)", () => {
+  it("matches a single path segment", async () => {
     mockFileStore.set(
       TEST_HASH,
       makeMockFile([
         {
-          url: 'https://example.com/users/*',
-          request: { method: 'GET' },
+          url: "https://example.com/users/*",
+          request: { method: "GET" },
           response: { status: 200, body: { id: 1 } },
         },
       ]),
     );
 
     const response = await invokeHandler(
-      makeRequest('https://example.com/users/42'),
+      makeRequest("https://example.com/users/42"),
     );
     expect(response?.status).toBe(200);
   });
 
-  it('does not cross a slash with *', async () => {
+  it("does not cross a slash with *", async () => {
     mockFileStore.set(
       TEST_HASH,
       makeMockFile([
         {
-          url: 'https://example.com/users/*',
-          request: { method: 'GET' },
+          url: "https://example.com/users/*",
+          request: { method: "GET" },
           response: { status: 200, body: {} },
         },
       ]),
     );
 
     const response = await invokeHandler(
-      makeRequest('https://example.com/users/42/posts'),
+      makeRequest("https://example.com/users/42/posts"),
     );
     expect(response?.status).toBe(500);
   });
 });
 
-describe('createMswHandler — {a,b} alternation', () => {
-  it('matches either protocol alternative', async () => {
+describe("createMswHandler — {a,b} alternation", () => {
+  it("matches either protocol alternative", async () => {
     mockFileStore.set(
       TEST_HASH,
       makeMockFile([
         {
-          url: '{http,https}://example.com/posts',
-          request: { method: 'GET' },
+          url: "{http,https}://example.com/posts",
+          request: { method: "GET" },
           response: { status: 200, body: [] },
         },
       ]),
     );
 
     const responseHttp = await invokeHandler(
-      makeRequest('http://example.com/posts'),
+      makeRequest("http://example.com/posts"),
     );
     expect(responseHttp?.status).toBe(200);
 
     const responseHttps = await invokeHandler(
-      makeRequest('https://example.com/posts'),
+      makeRequest("https://example.com/posts"),
     );
     expect(responseHttps?.status).toBe(200);
   });
 });
 
-describe('createMswHandler — ? as a literal query string separator', () => {
-  it('matches any query string when using ?**', async () => {
+describe("createMswHandler — ? as a literal query string separator", () => {
+  it("matches any query string when using ?**", async () => {
     mockFileStore.set(
       TEST_HASH,
       makeMockFile([
         {
-          url: 'https://example.com/posts?**',
-          request: { method: 'GET' },
+          url: "https://example.com/posts?**",
+          request: { method: "GET" },
           response: { status: 200, body: [] },
         },
       ]),
     );
 
     const response = await invokeHandler(
-      makeRequest('https://example.com/posts?page=1&limit=5'),
+      makeRequest("https://example.com/posts?page=1&limit=5"),
     );
     expect(response?.status).toBe(200);
   });
 
-  it('does not match a URL without a query string when ? is required', async () => {
+  it("does not match a URL without a query string when ? is required", async () => {
     mockFileStore.set(
       TEST_HASH,
       makeMockFile([
         {
-          url: 'https://example.com/posts?**',
-          request: { method: 'GET' },
+          url: "https://example.com/posts?**",
+          request: { method: "GET" },
           response: { status: 200, body: [] },
         },
       ]),
     );
 
     const response = await invokeHandler(
-      makeRequest('https://example.com/posts'),
+      makeRequest("https://example.com/posts"),
     );
     expect(response?.status).toBe(500);
+  });
+});
+
+describe("createMswHandler — same-URL re-registration (last wins)", () => {
+  it("returns the last registered handler when the same URL+method appears twice", async () => {
+    mockFileStore.set(
+      TEST_HASH,
+      makeMockFile([
+        {
+          url: "https://example.com/posts",
+          request: { method: "GET" },
+          response: { status: 200, body: [{ id: 1 }] },
+        },
+        {
+          url: "https://example.com/posts",
+          request: { method: "GET" },
+          response: { status: 302, body: [] },
+        },
+      ]),
+    );
+
+    const response = await invokeHandler(
+      makeRequest("https://example.com/posts"),
+    );
+    expect(response?.status).toBe(302);
+    const body = await response?.json();
+    expect(body).toEqual([]);
+  });
+
+  it("first registration still wins when only one handler is present", async () => {
+    mockFileStore.set(
+      TEST_HASH,
+      makeMockFile([
+        {
+          url: "https://example.com/posts",
+          request: { method: "GET" },
+          response: { status: 200, body: [{ id: 1 }] },
+        },
+      ]),
+    );
+
+    const response = await invokeHandler(
+      makeRequest("https://example.com/posts"),
+    );
+    expect(response?.status).toBe(200);
   });
 });

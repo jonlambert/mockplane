@@ -16,7 +16,7 @@ test('renders posts', async ({ page }, testInfo) => {
   const network = createMockNetwork({ page, testInfo });
 
   // 2. Define your handlers
-  network.handle({
+  await network.handle({
     url: 'https://api.example.com/posts',
     request: { method: 'GET' },
     response: {
@@ -27,9 +27,6 @@ test('renders posts', async ({ page }, testInfo) => {
       ],
     },
   });
-
-  // 3. Commit handlers
-  await network.commit();
 
   await page.goto('http://localhost:3000/');
 
@@ -74,6 +71,7 @@ export default createServerEntry({
       const { withMockplaneContext } = await import('mockplane');
       return withMockplaneContext(request, () => handler.fetch(request)) as Promise<Response>;
     }
+
     return handler.fetch(request);
   },
 });

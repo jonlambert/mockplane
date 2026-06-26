@@ -1,23 +1,24 @@
-import { deepStrictEqual } from 'node:assert';
-import { appendFile, mkdir, readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { HttpResponse, http } from 'msw';
-import { setupServer } from 'msw/node';
-import type { MockFile, MockOptions } from './types';
-import { urlMatchesPattern } from './url-pattern';
+import { deepStrictEqual } from "node:assert";
+import { appendFile, mkdir, readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { HttpResponse, http } from "msw";
+import { setupServer } from "msw/node";
+import type { MockFile, MockOptions } from "./types";
+import { urlMatchesPattern } from "./url-pattern";
 
-export const INCORRECT_REQUEST_PREFIX = 'incorrect-request';
+export const INCORRECT_REQUEST_PREFIX = "incorrect-request";
 
 export function createMswHandler(options?: MockOptions) {
-  const mocksDir = options?.mocksDir ?? join(process.cwd(), 'node_modules', '.mockplane');
-  const resultsDir = options?.resultsDir ?? join(process.cwd(), 'test-results');
+  const mocksDir =
+    options?.mocksDir ?? join(process.cwd(), "node_modules", ".mockplane");
+  const resultsDir = options?.resultsDir ?? join(process.cwd(), "test-results");
 
   async function ensureResultsDir() {
     await mkdir(resultsDir, { recursive: true });
   }
 
-  return http.all('*', async ({ request }) => {
-    const hash = request.headers.get('mockId');
+  return http.all("*", async ({ request }) => {
+    const hash = request.headers.get("mockId");
 
     /**
      * If there's no hash, this request is likely coming from outside of the
@@ -44,11 +45,13 @@ export function createMswHandler(options?: MockOptions) {
 
     if (matchingFile) {
       const filePath = join(mocksDir, matchingFile);
-      const fileContents = await readFile(filePath, 'utf-8');
+      const fileContents = await readFile(filePath, "utf-8");
       const { label, handlers } = JSON.parse(fileContents) as MockFile;
 
-      const handler = handlers.find(
-        (h) => h.request.method === request.method && urlMatchesPattern(h.url, request.url),
+      const handler = handlers.findLast(
+        (h) =>
+          h.request.method === request.method &&
+          urlMatchesPattern(h.url, request.url),
       );
 
       if (handler) {
@@ -57,9 +60,11 @@ export function createMswHandler(options?: MockOptions) {
             .map((key) => key.toLowerCase())
             .sort();
 
-          const requestHeaderKeys = Object.keys(Object.fromEntries(request.headers.entries()))
+          const requestHeaderKeys = Object.keys(
+            Object.fromEntries(request.headers.entries()),
+          )
             .map((key) => key.toLowerCase())
-            .filter((key) => key !== 'mockid')
+            .filter((key) => key !== "mockid")
             .sort();
 
           try {
@@ -71,7 +76,7 @@ export function createMswHandler(options?: MockOptions) {
               `${JSON.stringify(
                 {
                   label,
-                  type: 'headers',
+                  type: "headers",
                   url: request.url,
                   actual: requestHeaderKeys,
                   expected: handlerHeaderKeys,
@@ -80,26 +85,26 @@ export function createMswHandler(options?: MockOptions) {
                 null,
                 2,
               )}\n\n`,
-              'utf-8',
+              "utf-8",
             );
           }
         }
 
         return new HttpResponse(JSON.stringify(handler.response.body), {
           status: handler.response.status,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { "Content-Type": "application/json" },
         });
       }
     }
 
     await ensureResultsDir();
     await appendFile(
-      join(resultsDir, 'leaked-requests.txt'),
+      join(resultsDir, "leaked-requests.txt"),
       `${request.url} initiated by ${hash}\n`,
-      'utf-8',
+      "utf-8",
     );
 
-    return new HttpResponse(JSON.stringify({ error: 'Leaked request' }), {
+    return new HttpResponse(JSON.stringify({ error: "Leaked request" }), {
       status: 500,
     });
   });
